@@ -43,4 +43,20 @@ class ChatUseCase {
   String generateChatId(String userId1, String userId2) {
     return _chatRepository.generateChatId(userId1, userId2);
   }
+
+  Future<void> sendImageMessage({
+    required String chatId,
+    required String senderId,
+    required String senderName,
+    required String imageBase64,
+    String? caption,
+  }) async {
+    return await _chatRepository.sendImageMessage(
+      chatId: chatId,
+      senderId: senderId,
+      senderName: senderName,
+      imageBase64: imageBase64,
+      caption: caption,
+    );
+  }
 }

@@ -38,7 +38,14 @@ class ChatView extends StatelessWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text(recipientName), centerTitle: true),
+      appBar: AppBar(
+        title: Text(recipientName),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Get.back(),
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -91,6 +98,8 @@ class ChatView extends StatelessWidget {
                           message: message.message,
                           senderName: message.senderName,
                           isCurrentUser: isCurrentUser,
+                          isImage: message.isImage,
+                          imageBase64: message.imageBase64,
                         );
                       },
                     ),
@@ -99,11 +108,22 @@ class ChatView extends StatelessWidget {
               },
             ),
           ),
-          MessageInputField(
-            controller: messageController,
-            onSend: () async {
-              await controller.sendMessage(messageController.text);
-              messageController.clear();
+          GetBuilder<ChatController>(
+            builder: (controller) {
+              return MessageInputField(
+                controller: messageController,
+                selectedImageBase64: controller.selectedImageBase64.value,
+                onRemoveImage: () {
+                  controller.clearSelectedImage();
+                },
+                onSend: () async {
+                  await controller.sendMessage(messageController.text);
+                  messageController.clear();
+                },
+                imagePicker: () async {
+                  await controller.pickImageFromGallery();
+                },
+              );
             },
           ),
         ],

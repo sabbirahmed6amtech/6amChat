@@ -17,4 +17,12 @@ abstract class ChatRepository {
     required String senderName,
     required String message,
   });
+
+  Future<void> sendImageMessage({
+    required String chatId,
+    required String senderId,
+    required String senderName,
+    required String imageBase64,
+    String? caption,
+  });
 }

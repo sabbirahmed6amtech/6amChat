@@ -5,6 +5,11 @@ import '../../domain/repositories/chat_repository.dart' as domain;
 class ChatRepositoryImpl implements domain.ChatRepository {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
+  MessageType _parseMessageType(dynamic type) {
+    if (type == 'image') return MessageType.image;
+    return MessageType.text;
+  }
+
   @override
   String generateChatId(String userId1, String userId2) {
     final ids = [userId1, userId2];
@@ -25,8 +30,11 @@ class ChatRepositoryImpl implements domain.ChatRepository {
             senderId: data['senderId'] ?? '',
             senderName: data['senderName'] ?? '',
             message: data['message'] ?? '',
-            timestamp:
-                DateTime.fromMillisecondsSinceEpoch(data['timestamp'] ?? 0),
+            timestamp: DateTime.fromMillisecondsSinceEpoch(
+              data['timestamp'] ?? 0,
+            ),
+            messageType: _parseMessageType(data['messageType']),
+            imageBase64: data['imageBase64'],
           );
         }).toList();
         messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -53,17 +61,23 @@ class ChatRepositoryImpl implements domain.ChatRepository {
             senderId: data['senderId'] ?? '',
             senderName: data['senderName'] ?? '',
             message: data['message'] ?? '',
-            timestamp:
-                DateTime.fromMillisecondsSinceEpoch(data['timestamp'] ?? 0),
+            timestamp: DateTime.fromMillisecondsSinceEpoch(
+              data['timestamp'] ?? 0,
+            ),
+            messageType: _parseMessageType(data['messageType']),
+            imageBase64: data['imageBase64'],
           );
         }).toList();
         messagesList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        
+
         // Apply pagination
         final totalMessages = messagesList.length;
-        final startIndex = (totalMessages - offset - limit).clamp(0, totalMessages);
+        final startIndex = (totalMessages - offset - limit).clamp(
+          0,
+          totalMessages,
+        );
         final endIndex = (totalMessages - offset).clamp(0, totalMessages);
-        
+
         return messagesList.sublist(startIndex, endIndex);
       }
       return [];
@@ -83,6 +97,27 @@ class ChatRepositoryImpl implements domain.ChatRepository {
       'senderId': senderId,
       'senderName': senderName,
       'message': message,
+      'messageType': 'text',
+      'timestamp': timestamp,
+    });
+  }
+
+  @override
+  Future<void> sendImageMessage({
+    required String chatId,
+    required String senderId,
+    required String senderName,
+    required String imageBase64,
+    String? caption,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    await _database.ref('chats/$chatId/messages').push().set({
+      'senderId': senderId,
+      'senderName': senderName,
+      'message': caption ?? '📷 Image',
+      'messageType': 'image',
+      'imageBase64': imageBase64,
       'timestamp': timestamp,
     });
   }
