@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 import 'package:sixamchat/core/constants/app_strings.dart';
 import 'chat_controller.dart';
 import '../../../presentation/shared/widgets/index.dart';
@@ -20,7 +20,7 @@ class ChatView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<ChatController>();
+    final controller = context.read<ChatController>();
     final messageController = TextEditingController();
     final scrollController = ScrollController();
 
@@ -43,15 +43,15 @@ class ChatView extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Get.back(),
+          onPressed: () => Navigator.pop(context)
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: GetBuilder<ChatController>(
-              builder: (controller) {
-                if (controller.isLoading.value) {
+            child: Consumer<ChatController>(
+              builder: (context,controller,_) {
+                if (controller.isLoading) {
                   return const AppLoading();
                 }
 
@@ -69,10 +69,10 @@ class ChatView extends StatelessWidget {
                       reverse: true,
                       itemCount:
                           controller.messages.length +
-                          (controller.isLoadingMore.value ? 1 : 0),
+                          (controller.isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == controller.messages.length &&
-                            controller.isLoadingMore.value) {
+                            controller.isLoadingMore) {
                           return Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Center(
@@ -108,20 +108,20 @@ class ChatView extends StatelessWidget {
               },
             ),
           ),
-          GetBuilder<ChatController>(
-            builder: (controller) {
+          Consumer<ChatController>(
+            builder: (context,controller,_) {
               return MessageInputField(
                 controller: messageController,
-                selectedImageBase64: controller.selectedImageBase64.value,
+                selectedImageBase64: controller.selectedImageBase64,
                 onRemoveImage: () {
                   controller.clearSelectedImage();
                 },
                 onSend: () async {
-                  await controller.sendMessage(messageController.text);
+                  await controller.sendMessage(messageController.text,context);
                   messageController.clear();
                 },
                 imagePicker: () async {
-                  await controller.pickImageFromGallery();
+                  await controller.pickImageFromGallery(context);
                 },
               );
             },

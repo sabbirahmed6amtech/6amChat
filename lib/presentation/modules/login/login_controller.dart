@@ -1,28 +1,28 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import '../../../core/index.dart';
 import '../../../domain/usecases/auth_usecase.dart';
+import '../../../core/index.dart';
 
-class LoginController extends GetxController {
+class LoginController with ChangeNotifier {
   final AuthUseCase _authUseCase;
-  
-  RxString currentUserName = ''.obs;
-  RxString currentUserEmail = ''.obs;
-  RxString currentUserId = ''.obs;
-  RxBool isLoading = false.obs;
 
-  LoginController(this._authUseCase);
-
-  @override
-  void onInit() {
-    super.onInit();
+  LoginController(this._authUseCase) {
     _setupAuthStateListener();
   }
 
+
+  String currentUserName = '';
+  String currentUserEmail = '';
+  String currentUserId = '';
+  bool isLoading = false;
+
+  StreamSubscription? _authSubscription;
+
+
   void _setupAuthStateListener() {
-    _authUseCase.getAuthState().listen((user) {
+    _authSubscription = _authUseCase.getAuthState().listen((user) {
       if (user != null) {
-        currentUserId.value = user.uid;
+        currentUserId = user.uid;
         _handleUserLoggedIn(user.uid);
       } else {
         _handleUserLoggedOut();
@@ -34,91 +34,105 @@ class LoginController extends GetxController {
     try {
       final userData = await _authUseCase.fetchUserData(uid);
       if (userData != null) {
-        currentUserName.value = userData.fullName;
-        currentUserEmail.value = userData.email;
-        update();
-        // Auto-navigate to home if user is already logged in (e.g., on app restart)
-        if (Get.currentRoute == '/login') {
-          Get.offNamed('/home');
-        }
+        currentUserName = userData.fullName;
+        currentUserEmail = userData.email;
+        notifyListeners();
       }
     } catch (e) {
-      print('Error fetching user data: $e');
+      debugPrint('Error fetching user data: $e');
     }
   }
 
   void _handleUserLoggedOut() {
-    currentUserName.value = '';
-    currentUserEmail.value = '';
-    currentUserId.value = '';
-    update();
+    currentUserName = '';
+    currentUserEmail = '';
+    currentUserId = '';
+    notifyListeners();
   }
+
 
   Future<void> signup({
     required String name,
     required String email,
     required String password,
+    required BuildContext context,
   }) async {
     try {
-      isLoading.value = true;
-      update();
+      isLoading = true;
+      notifyListeners();
+
       await _authUseCase.signup(
         name: name,
         email: email,
         password: password,
       );
-      currentUserName.value = name;
-      currentUserEmail.value = email;
-      update();
+
+      currentUserName = name;
+      currentUserEmail = email;
     } on SignupException catch (e) {
-      Get.snackbar('Signup Failed', e.message,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
-    } catch (e) {
-      Get.snackbar('Error', 'An unexpected error occurred',
-          snackPosition: SnackPosition.BOTTOM);
+      _showSnackBar(context, e.message, isError: true);
+    } catch (_) {
+      _showSnackBar(context, 'An unexpected error occurred', isError: true);
     } finally {
-      isLoading.value = false;
-      update();
+      isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> login({
     required String email,
     required String password,
+    required BuildContext context,
   }) async {
     try {
-      isLoading.value = true;
-      update();
+      isLoading = true;
+      notifyListeners();
+
       await _authUseCase.login(
         email: email,
         password: password,
       );
     } on LoginException catch (e) {
-      Get.snackbar('Login Failed', e.message,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
-    } catch (e) {
-      Get.snackbar('Error', 'An unexpected error occurred',
-          snackPosition: SnackPosition.BOTTOM);
+      _showSnackBar(context, e.message, isError: true);
+    } catch (_) {
+      _showSnackBar(context, 'An unexpected error occurred', isError: true);
     } finally {
-      isLoading.value = false;
-      update();
+      isLoading = false;
+      notifyListeners();
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout(BuildContext context) async {
     try {
-      isLoading.value = true;
-      update();
+      isLoading = true;
+      notifyListeners();
       await _authUseCase.logout();
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      _showSnackBar(context, e.toString(), isError: true);
     } finally {
-      isLoading.value = false;
-      update();
+      isLoading = false;
+      notifyListeners();
     }
+  }
+
+
+  void _showSnackBar(
+      BuildContext context,
+      String message, {
+        bool isError = false,
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }

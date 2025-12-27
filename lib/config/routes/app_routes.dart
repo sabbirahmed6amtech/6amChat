@@ -4,7 +4,6 @@ import 'package:sixamchat/presentation/routes/app_pages.dart';
 
 export '../../presentation/routes/app_pages.dart' show Routes;
 
-/// Convenience alias for Routes class
 class AppRoutes {
   static const login = Routes.login;
   static const signup = Routes.signup;

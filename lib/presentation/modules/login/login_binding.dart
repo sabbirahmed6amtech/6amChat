@@ -1,10 +1,19 @@
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/services/service_locator.dart';
+import '../../../domain/usecases/auth_usecase.dart';
 import 'login_controller.dart';
 
-class LoginBinding extends Bindings {
+class LoginBinding extends StatelessWidget {
+  final Widget child;
+
+  const LoginBinding({super.key, required this.child});
+
   @override
-  void dependencies() {
-    Get.put<LoginController>(getIt<LoginController>());
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<LoginController>(
+      create: (_) => LoginController(getIt<AuthUseCase>()),
+      child: child,
+    );
   }
 }

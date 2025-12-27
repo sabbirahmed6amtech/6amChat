@@ -1,31 +1,38 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../../../domain/entities/message_entity.dart';
 import '../../../domain/usecases/chat_usecase.dart';
 
-class ChatController extends GetxController {
+class ChatController with ChangeNotifier {
   final ChatUseCase _chatUseCase;
 
-  RxList<MessageEntity> messages = <MessageEntity>[].obs;
-  RxBool isLoading = false.obs;
-  RxBool isSending = false.obs;
-  RxBool isLoadingMore = false.obs;
-  RxBool hasMoreMessages = true.obs;
+  ChatController(this._chatUseCase);
+
+
+  final List<MessageEntity> messages = [];
+
+  bool isLoading = false;
+  bool isSending = false;
+  bool isLoadingMore = false;
+  bool hasMoreMessages = true;
+
   late String chatId;
   late String currentUserId;
   late String currentUserName;
+
   int _currentPage = 0;
+  StreamSubscription? _messageSubscription;
 
-  // Store selected image for preview before sending
-  RxnString selectedImageBase64 = RxnString();
+  String? selectedImageBase64;
 
-  bool get hasSelectedImage => selectedImageBase64.value != null;
+  bool get hasSelectedImage => selectedImageBase64 != null;
 
-  ChatController(this._chatUseCase);
 
   void initChat({
     required String userId1,
@@ -35,70 +42,70 @@ class ChatController extends GetxController {
     currentUserId = userId1;
     currentUserName = userName;
     chatId = _chatUseCase.generateChatId(userId1, userId2);
+
     _currentPage = 0;
+    messages.clear();
+    hasMoreMessages = true;
+
     fetchMessages();
   }
 
+
   void fetchMessages() {
-    isLoading.value = true;
-    update();
-    _chatUseCase
-        .getMessages(chatId)
-        .listen(
+    isLoading = true;
+    notifyListeners();
+
+    _messageSubscription?.cancel();
+    _messageSubscription = _chatUseCase.getMessages(chatId).listen(
           (messageList) {
-            messages.value = messageList;
-            isLoading.value = false;
-            update();
-          },
-          onError: (error) {
-            isLoading.value = false;
-            Get.snackbar('Error', 'Failed to fetch messages');
-            update();
-          },
-        );
+        messages
+          ..clear()
+          ..addAll(messageList);
+        isLoading = false;
+        notifyListeners();
+      },
+      onError: (_) {
+        isLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
+
   void loadMoreMessages() {
-    if (isLoadingMore.value || !hasMoreMessages.value) return;
+    if (isLoadingMore || !hasMoreMessages) return;
 
-    print('📜 Loading more messages... Page: ${_currentPage + 1}');
-
-    isLoadingMore.value = true;
-    update();
+    isLoadingMore = true;
+    notifyListeners();
 
     _currentPage++;
     final offset = _currentPage * AppConstants.messagesPerPage;
-    print('📜 Offset: $offset, Limit: ${AppConstants.messagesPerPage}');
 
     _chatUseCase
         .getMessagesPaginated(
-          chatId,
-          limit: AppConstants.messagesPerPage,
-          offset: offset,
-        )
+      chatId,
+      limit: AppConstants.messagesPerPage,
+      offset: offset,
+    )
         .listen(
           (newMessages) {
-            print('📜 Loaded ${newMessages.length} older messages');
-            if (newMessages.isEmpty) {
-              hasMoreMessages.value = false;
-              print('📜 No more messages to load');
-            } else {
-              messages.addAll(newMessages);
-              print('📜 Total messages now: ${messages.length}');
-            }
-            isLoadingMore.value = false;
-            update();
-          },
-          onError: (error) {
-            print('📜 Error loading more messages: $error');
-            isLoadingMore.value = false;
-            Get.snackbar('Error', 'Failed to load more messages');
-            update();
-          },
-        );
+        if (newMessages.isEmpty) {
+          hasMoreMessages = false;
+        } else {
+          messages.addAll(newMessages);
+        }
+        isLoadingMore = false;
+        notifyListeners();
+      },
+      onError: (_) {
+        isLoadingMore = false;
+        notifyListeners();
+      },
+    );
   }
 
-  Future<void> pickImageFromGallery() async {
+
+  Future<void> pickImageFromGallery(BuildContext context) async {
     try {
       final XFile? pickedFile = await ImagePicker().pickImage(
         source: ImageSource.gallery,
@@ -107,69 +114,53 @@ class ChatController extends GetxController {
         imageQuality: 70,
       );
 
-      if (pickedFile == null) {
-        print('📸 No image selected');
-        return;
-      }
+      if (pickedFile == null) return;
 
-      print('📸 Picked file: ${pickedFile.path}');
-
-      // Convert to base64
       final File imageFile = File(pickedFile.path);
       final List<int> imageBytes = await imageFile.readAsBytes();
       final String base64Image = base64Encode(imageBytes);
 
-      print('📸 Image converted to base64, length: ${base64Image.length}');
-
       if (base64Image.length > 10 * 1024 * 1024) {
-        // 10MB limit
-        Get.snackbar(
-          'Error',
-          'Image is too large. Please select a smaller image.',
-        );
+        _showSnackBar(context, 'Image is too large');
         return;
       }
 
-      // Store image for preview (don't send yet)
-      selectedImageBase64.value = base64Image;
-      update();
-      print('📸 Image ready for preview');
-    } catch (e) {
-      print('📸 Error picking image: $e');
-      Get.snackbar('Error', 'Failed to pick image');
+      selectedImageBase64 = base64Image;
+      notifyListeners();
+    } catch (_) {
+      _showSnackBar(context, 'Failed to pick image');
     }
   }
 
   void clearSelectedImage() {
-    selectedImageBase64.value = null;
-    update();
+    selectedImageBase64 = null;
+    notifyListeners();
   }
 
-  Future<void> sendMessage(String messageText) async {
-    final hasText = messageText.trim().isNotEmpty;
-    final hasImage = selectedImageBase64.value != null;
 
-    // Nothing to send
+  Future<void> sendMessage(
+      String messageText,
+      BuildContext context,
+      ) async {
+    final hasText = messageText.trim().isNotEmpty;
+    final hasImage = selectedImageBase64 != null;
+
     if (!hasText && !hasImage) return;
 
     try {
-      isSending.value = true;
-      update();
+      isSending = true;
+      notifyListeners();
 
       if (hasImage) {
-        // Send image message (with optional caption as text)
         await _chatUseCase.sendImageMessage(
           chatId: chatId,
           senderId: currentUserId,
           senderName: currentUserName,
-          imageBase64: selectedImageBase64.value!,
+          imageBase64: selectedImageBase64!,
           caption: hasText ? messageText.trim() : null,
         );
-        // Clear selected image after sending
-        selectedImageBase64.value = null;
-        print('📸 Image message sent successfully');
+        selectedImageBase64 = null;
       } else {
-        // Send text-only message
         await _chatUseCase.sendMessage(
           chatId: chatId,
           senderId: currentUserId,
@@ -177,11 +168,25 @@ class ChatController extends GetxController {
           message: messageText,
         );
       }
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to send message');
+    } catch (_) {
+      _showSnackBar(context, 'Failed to send message');
     } finally {
-      isSending.value = false;
-      update();
+      isSending = false;
+      notifyListeners();
     }
+  }
+
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 }

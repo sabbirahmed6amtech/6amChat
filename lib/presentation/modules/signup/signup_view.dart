@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 import '../../../config/routes/app_routes.dart';
 import '../../../core/index.dart';
 import 'signup_controller.dart';
@@ -18,18 +18,22 @@ class _SignupViewState extends State<SignupView> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   late SignupController controller;
 
   @override
   void initState() {
     super.initState();
-    controller = Get.find<SignupController>();
+    controller = context.read<SignupController>();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppStrings.appName), centerTitle: true),
+      appBar: AppBar(
+        title: Text(AppStrings.appName),
+        centerTitle: true,
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -86,13 +90,12 @@ class _SignupViewState extends State<SignupView> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  GetBuilder<SignupController>(
-                    builder: (ctrl) => CustomButton(
+                  Consumer<SignupController>(
+                    builder: (_, ctrl, __) => CustomButton(
                       text: 'Sign Up',
-                      onPressed: ctrl.currentUserId.value.isEmpty
-                          ? signup
-                          : null,
-                      isLoading: ctrl.isLoading.value,
+                      onPressed:
+                      ctrl.isLoading ? null : signup,
+                      isLoading: ctrl.isLoading,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -102,7 +105,10 @@ class _SignupViewState extends State<SignupView> {
                       const Text('Already have an account? '),
                       TextButton(
                         onPressed: () {
-                          Get.toNamed(AppRoutes.login);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            Routes.login,
+                          );
                         },
                         child: const Text('Login'),
                       ),
@@ -123,9 +129,14 @@ class _SignupViewState extends State<SignupView> {
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        context: context
       );
-      if (controller.currentUserId.value.isNotEmpty) {
-        Get.offNamed(AppRoutes.home);
+
+      if (controller.currentUserId.isNotEmpty && mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          Routes.home,
+        );
       }
     }
   }

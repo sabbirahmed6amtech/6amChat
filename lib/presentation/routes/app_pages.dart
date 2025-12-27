@@ -1,4 +1,5 @@
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+
 import '../modules/login/login_binding.dart';
 import '../modules/login/login_view.dart';
 import '../modules/signup/signup_binding.dart';
@@ -11,40 +12,53 @@ import '../modules/chat/chat_view.dart';
 class AppPages {
   static const initial = Routes.login;
 
-  static final routes = [
-    GetPage(
-      name: Routes.login,
-      page: () => const LoginView(),
-      binding: LoginBinding(),
-      transition: Transition.fadeIn,
-    ),
-    GetPage(
-      name: Routes.signup,
-      page: () => const SignupView(),
-      binding: SignupBinding(),
-      transition: Transition.fadeIn,
-    ),
-    GetPage(
-      name: Routes.home,
-      page: () => const HomeView(),
-      binding: HomeBinding(),
-      transition: Transition.fadeIn,
-    ),
-    GetPage(
-      name: Routes.chat,
-      page: () {
-        final arguments = Get.arguments as Map<String, dynamic>;
-        return ChatView(
-          recipientName: arguments['recipientName'],
-          recipientId: arguments['recipientId'],
-          currentUserId: arguments['currentUserId'],
-          currentUserName: arguments['currentUserName'],
+  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case Routes.login:
+        return MaterialPageRoute(
+          builder: (_) => LoginBinding(
+            child: const LoginView(),
+          ),
         );
-      },
-      binding: ChatBinding(),
-      transition: Transition.rightToLeft,
-    ),
-  ];
+
+      case Routes.signup:
+        return MaterialPageRoute(
+          builder: (_) => SignupBinding(
+            child: const SignupView(),
+          ),
+        );
+
+      case Routes.home:
+        return MaterialPageRoute(
+          builder: (_) => HomeBinding(
+            child: const HomeView(),
+          ),
+        );
+
+      case Routes.chat:
+        final args = settings.arguments as Map<String, dynamic>;
+
+        return MaterialPageRoute(
+          builder: (_) => ChatBinding(
+            child: ChatView(
+              recipientName: args['recipientName'],
+              recipientId: args['recipientId'],
+              currentUserId: args['currentUserId'],
+              currentUserName: args['currentUserName'],
+            ),
+          ),
+        );
+
+      default:
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(
+              child: Text('Route not found'),
+            ),
+          ),
+        );
+    }
+  }
 }
 
 abstract class Routes {

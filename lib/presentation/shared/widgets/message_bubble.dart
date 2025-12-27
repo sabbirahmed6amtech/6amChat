@@ -70,7 +70,6 @@ class MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            // Show caption/text if not empty and not just the default image placeholder
             if (message.isNotEmpty && message != '📷 Image')
               Padding(
                 padding: EdgeInsets.only(top: isImage ? 8 : 0),

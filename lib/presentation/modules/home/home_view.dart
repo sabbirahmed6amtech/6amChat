@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 import 'package:sixamchat/core/constants/app_strings.dart';
 import '../../../config/routes/app_routes.dart';
 import '../login/login_controller.dart';
@@ -11,8 +11,8 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authController = Get.find<LoginController>();
-    Get.find<HomeController>();
+    final authController = context.read<LoginController>();
+    final homeController = context.read<HomeController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -22,24 +22,24 @@ class HomeView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await authController.logout();
-              Get.offNamed(AppRoutes.login);
+              await authController.logout(context);
+              Navigator.pop(context);
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          GetBuilder<LoginController>(
-            builder: (authCtrl) =>
-                UserProfileHeader(userName: authCtrl.currentUserName.value),
+          Consumer<LoginController>(
+            builder: (_,authCtrl,_) =>
+                UserProfileHeader(userName: authCtrl.currentUserName),
           ),
           Expanded(
-            child: GetBuilder<HomeController>(
-              builder: (controller) {
-                final authCtrl = Get.find<LoginController>();
+            child: Consumer<HomeController>(
+              builder: (_,controller,_) {
+                final authCtrl = context.read<LoginController>();
 
-                if (controller.isLoading.value) {
+                if (controller.isLoading) {
                   return const AppLoading();
                 }
 
@@ -59,13 +59,14 @@ class HomeView extends StatelessWidget {
                       userName: user.fullName,
                       userEmail: user.email,
                       onTap: () {
-                        Get.toNamed(
-                          AppRoutes.chat,
+                        Navigator.pushNamed(
+                          context,
+                          Routes.chat,
                           arguments: {
                             'recipientName': user.fullName,
                             'recipientId': user.uid,
-                            'currentUserId': authCtrl.currentUserId.value,
-                            'currentUserName': authCtrl.currentUserName.value,
+                            'currentUserId': authCtrl.currentUserId,
+                            'currentUserName': authCtrl.currentUserName,
                           },
                         );
                       },

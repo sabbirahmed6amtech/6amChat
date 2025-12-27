@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 import '../../../config/routes/app_routes.dart';
 import '../../../core/index.dart';
 import 'login_controller.dart';
@@ -21,7 +21,7 @@ class _LoginViewState extends State<LoginView> {
   @override
   void initState() {
     super.initState();
-    controller = Get.find<LoginController>();
+    controller = context.read<LoginController>();
   }
 
   @override
@@ -72,13 +72,13 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  GetBuilder<LoginController>(
-                    builder: (ctrl) => CustomButton(
+                  Consumer<LoginController>(
+                    builder: (_,ctrl,_) => CustomButton(
                       text: 'Login',
-                      onPressed: ctrl.currentUserId.value.isEmpty
+                      onPressed: ctrl.currentUserId.isEmpty
                           ? login
                           : null,
-                      isLoading: ctrl.isLoading.value,
+                      isLoading: ctrl.isLoading,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -88,7 +88,7 @@ class _LoginViewState extends State<LoginView> {
                       const Text("Don't have an account? "),
                       TextButton(
                         onPressed: () {
-                          Get.toNamed(AppRoutes.signup);
+                          Navigator.pushNamed(context, Routes.signup);
                         },
                         child: const Text('Sign Up'),
                       ),
@@ -108,12 +108,15 @@ class _LoginViewState extends State<LoginView> {
       await controller.login(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        context: context
       );
-      if (controller.currentUserId.value.isNotEmpty) {
-        Get.offNamed(AppRoutes.home);
+
+      if (controller.currentUserId.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, Routes.home);
       }
     }
   }
+
 
   @override
   void dispose() {
