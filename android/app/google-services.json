@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "70137099220",
+    "project_id": "amchat-bebef",
+    "storage_bucket": "amchat-bebef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:70137099220:android:9dbcd2721aac9a340d1c41",
+        "android_client_info": {
+          "package_name": "com.example.sixamchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZhsZrc2CNGVq_xdBMJN2tknEt-S_a_5s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
